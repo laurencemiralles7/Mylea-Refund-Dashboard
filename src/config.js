@@ -11,14 +11,20 @@ export const STORES = [
     currency: '$',
     color: '#6366F1',
   },
-  // Example — uncomment and fill in when ready:
-  // {
-  //   id: 'mylea',
-  //   name: 'Mylea',
-  //   sheetName: 'Mylea',
-  //   currency: '$',
-  //   color: '#10B981',
-  // },
+  {
+    id: 'luuza',
+    name: 'LUUZA',
+    sheetName: 'LUUZA',
+    currency: '$',
+    color: '#10B981',
+  },
+  {
+    id: 'bimbloo',
+    name: 'BIMBLOO',
+    sheetName: 'BIMBLOO',
+    currency: '$',
+    color: '#F59E0B',
+  },
 ]
 
 export const REFRESH_INTERVAL_MS = 5 * 60 * 1000 // 5 minutes
