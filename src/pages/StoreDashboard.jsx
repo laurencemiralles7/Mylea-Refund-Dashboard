@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useParams, Navigate } from 'react-router-dom'
 import { STORES } from '../config'
 import { useSheetData } from '../hooks/useSheetData'
@@ -7,10 +8,12 @@ import {
   getByReason, getByProduct, getByPayment, getByAgent,
 } from '../utils/aggregations'
 import { formatCurrency } from '../utils/csv'
+import { filterRowsByRange, getPresetRange, getMonthRange } from '../utils/dateFilters'
 import KpiCard from '../components/KpiCard'
 import DailyChart from '../components/DailyChart'
 import WeeklyChart from '../components/WeeklyChart'
 import DataTable from '../components/DataTable'
+import DateFilter from '../components/DateFilter'
 import Spinner from '../components/Spinner'
 
 function RefreshButton({ onClick, lastUpdated }) {
@@ -32,12 +35,26 @@ function RefreshButton({ onClick, lastUpdated }) {
   )
 }
 
+function resolveRange(filter) {
+  if (!filter) return null
+  if (filter.type === 'preset') return getPresetRange(filter.id)
+  if (filter.type === 'month') return getMonthRange(filter.year, filter.month)
+  if (filter.type === 'custom') {
+    const start = new Date(filter.start)
+    const end = new Date(filter.end)
+    end.setHours(23, 59, 59, 999)
+    return { start, end }
+  }
+  return null
+}
+
 export default function StoreDashboard() {
   const { storeId } = useParams()
   const store = STORES.find(s => s.id === storeId)
   if (!store) return <Navigate to="/" replace />
 
   const { rows, loading, error, lastUpdated, refresh } = useSheetData(store.sheetName)
+  const [filter, setFilter] = useState({ type: 'preset', id: 'this_month' })
 
   if (loading) return <Spinner message={`Loading ${store.name} data…`} />
 
@@ -51,17 +68,20 @@ export default function StoreDashboard() {
     )
   }
 
-  const mtdRows = getMTDRows(rows)
-  const pendingRows = getPendingRows(rows)
-  const pendingAmount = sumAmount(pendingRows)
-  const mtdAmount = sumAmount(mtdRows)
+  const range = resolveRange(filter)
+  const filtered = filterRowsByRange(rows, range)
 
-  const daily = getDailyRefunds(rows)
-  const weekly = getWeeklyRefunds(rows)
-  const byReason = getByReason(rows)
-  const byProduct = getByProduct(rows)
-  const byPayment = getByPayment(rows)
-  const byAgent = getByAgent(rows)
+  // KPIs always use filtered rows
+  const pendingRows = getPendingRows(filtered)
+  const pendingAmount = sumAmount(pendingRows)
+  const totalAmount = sumAmount(filtered)
+
+  const daily = getDailyRefunds(filtered)
+  const weekly = getWeeklyRefunds(filtered)
+  const byReason = getByReason(filtered)
+  const byProduct = getByProduct(filtered)
+  const byPayment = getByPayment(filtered)
+  const byAgent = getByAgent(filtered)
 
   return (
     <div className="store-dashboard">
@@ -76,19 +96,22 @@ export default function StoreDashboard() {
         <RefreshButton onClick={refresh} lastUpdated={lastUpdated} />
       </div>
 
+      {/* Date Filter */}
+      <DateFilter rows={rows} value={filter} onChange={setFilter} />
+
       {/* KPI Cards */}
       <div className="kpi-grid">
         <KpiCard
-          label="MTD Refunds"
-          value={formatCurrency(mtdAmount)}
-          sub={`${mtdRows.length} refund${mtdRows.length !== 1 ? 's' : ''} this month`}
+          label="Total Refunds"
+          value={formatCurrency(totalAmount)}
+          sub={`${filtered.length} refund${filtered.length !== 1 ? 's' : ''}`}
           accent={store.color}
           icon="💸"
         />
         <KpiCard
           label="Refund Count"
-          value={mtdRows.length}
-          sub="Month to date"
+          value={filtered.length}
+          sub="In selected period"
           accent="#10B981"
           icon="📋"
         />
@@ -102,7 +125,7 @@ export default function StoreDashboard() {
         <KpiCard
           label="Pending Count"
           value={pendingRows.length}
-          sub={`${rows.length - pendingRows.length} processed`}
+          sub={`${filtered.length - pendingRows.length} processed`}
           accent="#EF4444"
           icon="🔴"
         />
@@ -124,23 +147,23 @@ export default function StoreDashboard() {
           title="Refund Reasons"
           rows={byReason}
           showBadge
-          emptyMessage="No reason data"
+          emptyMessage="No data for this period"
         />
         <DataTable
           title="Agent Performance"
           rows={byAgent}
-          emptyMessage="No agent data"
+          emptyMessage="No data for this period"
         />
         <DataTable
           title="Refunded Products"
           rows={byProduct}
           truncate
-          emptyMessage="No product data"
+          emptyMessage="No data for this period"
         />
         <DataTable
           title="Payment Methods"
           rows={byPayment}
-          emptyMessage="No payment data"
+          emptyMessage="No data for this period"
         />
       </div>
     </div>
