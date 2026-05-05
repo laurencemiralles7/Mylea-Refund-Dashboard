@@ -77,9 +77,12 @@ export function formatShortDate(date) {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
-/** Returns ISO date string "YYYY-MM-DD" for grouping. */
+/** Returns ISO date string "YYYY-MM-DD" for grouping (local time, not UTC). */
 export function toISODate(date) {
-  return date.toISOString().slice(0, 10)
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
 }
 
 /** Returns "Week of Apr 14" label for a date. */
