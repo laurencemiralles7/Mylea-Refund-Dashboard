@@ -40,9 +40,10 @@ function resolveRange(filter) {
   if (filter.type === 'preset') return getPresetRange(filter.id)
   if (filter.type === 'month') return getMonthRange(filter.year, filter.month)
   if (filter.type === 'custom') {
-    const start = new Date(filter.start)
-    const end = new Date(filter.end)
-    end.setHours(23, 59, 59, 999)
+    const [sy, sm, sd] = filter.start.split('-').map(Number)
+    const [ey, em, ed] = filter.end.split('-').map(Number)
+    const start = new Date(sy, sm - 1, sd)
+    const end = new Date(ey, em - 1, ed, 23, 59, 59, 999)
     return { start, end }
   }
   return null
