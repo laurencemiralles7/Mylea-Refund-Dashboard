@@ -77,13 +77,24 @@ export default function StoreDashboard() {
   const pendingAmount = sumAmount(pendingRows)
   const totalAmount = sumAmount(filtered)
 
-  const EXCLUDED_REASONS = ['out of stock', 'oos', 'order cancellation', 'cancellation']
+  const UNCONTROLLABLE_REASONS = ['out of stock', 'oos', 'order cancellation', 'cancellation']
   const issueRows = filtered.filter(r => {
     const reason = (r['Refund Reason'] || '').trim().toLowerCase()
-    return !EXCLUDED_REASONS.includes(reason)
+    return !UNCONTROLLABLE_REASONS.includes(reason)
+  })
+  const uncontrollableRows = filtered.filter(r => {
+    const reason = (r['Refund Reason'] || '').trim().toLowerCase()
+    return UNCONTROLLABLE_REASONS.includes(reason)
   })
   const issueAmount = sumAmount(issueRows)
-  const issuePct = totalAmount > 0 ? Math.round((issueAmount / totalAmount) * 100) : 0
+  const uncontrollableAmount = sumAmount(uncontrollableRows)
+
+  const issueRefundPcts = issueRows
+    .map(r => parseFloat(r['Refund Percentage']))
+    .filter(v => !isNaN(v))
+  const avgIssuePct = issueRefundPcts.length > 0
+    ? Math.round(issueRefundPcts.reduce((a, b) => a + b, 0) / issueRefundPcts.length)
+    : null
 
   const daily = getDailyRefunds(filtered)
   const weekly = getWeeklyRefunds(filtered)
@@ -139,10 +150,17 @@ export default function StoreDashboard() {
           icon="🔴"
         />
         <KpiCard
+          label="OOS & Cancellations"
+          value={formatCurrency(uncontrollableAmount)}
+          sub={`${uncontrollableRows.length} refund${uncontrollableRows.length !== 1 ? 's' : ''}`}
+          accent="#6B7280"
+          icon="📦"
+        />
+        <KpiCard
           label="Issue-Based Refunds"
           value={formatCurrency(issueAmount)}
-          sub={`${issueRows.length} refund${issueRows.length !== 1 ? 's' : ''} · ${issuePct}% of total`}
-          accent="#8B5CF6"
+          sub={`${issueRows.length} refund${issueRows.length !== 1 ? 's' : ''}${avgIssuePct !== null ? ` · Avg ${avgIssuePct}% refunded` : ''}`}
+          accent="#EF4444"
           icon="⚠️"
         />
       </div>
