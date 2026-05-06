@@ -77,6 +77,14 @@ export default function StoreDashboard() {
   const pendingAmount = sumAmount(pendingRows)
   const totalAmount = sumAmount(filtered)
 
+  const EXCLUDED_REASONS = ['out of stock', 'oos', 'order cancellation', 'cancellation']
+  const issueRows = filtered.filter(r => {
+    const reason = (r['Refund Reason'] || '').trim().toLowerCase()
+    return !EXCLUDED_REASONS.includes(reason)
+  })
+  const issueAmount = sumAmount(issueRows)
+  const issuePct = totalAmount > 0 ? Math.round((issueAmount / totalAmount) * 100) : 0
+
   const daily = getDailyRefunds(filtered)
   const weekly = getWeeklyRefunds(filtered)
   const byReason = getByReason(filtered)
@@ -129,6 +137,13 @@ export default function StoreDashboard() {
           sub={`${filtered.length - pendingRows.length} processed`}
           accent="#EF4444"
           icon="🔴"
+        />
+        <KpiCard
+          label="Issue-Based Refunds"
+          value={formatCurrency(issueAmount)}
+          sub={`${issueRows.length} refund${issueRows.length !== 1 ? 's' : ''} · ${issuePct}% of total`}
+          accent="#8B5CF6"
+          icon="⚠️"
         />
       </div>
 
