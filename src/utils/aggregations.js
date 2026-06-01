@@ -3,17 +3,29 @@ import { parseAmount, parseDate, toISODate, weekKey, weekLabel, formatShortDate 
 const COL = {
   ORDER: 'Order #',
   AGENT: 'Refunded By',
-  APPROVER: 'Approved by',
   PRODUCT: 'Refunded product/s',
   REASON: 'Refund Reason',
   REFUND_PCT: 'Refund Percentage',
   TOTAL_PAID: 'Total paid amount',
-  AMOUNT: 'Refund Amount',
+  AMOUNT_USD: 'Refund amount in USD',
+  AMOUNT: 'Refund Amount (apply in shopify)',
+  AMOUNT_LEGACY: 'Refund Amount',
   DATE_APPLIED: 'Date Applied',
-  SUCCESS_DATE: 'Success Date(Shopify)',
   PAYMENT: 'Payment Method',
   NOTES: 'Notes/Remarks',
   TICKET: 'Link to ticket',
+}
+
+const normalize = s => s.replace(/\s+/g, ' ').trim().toLowerCase()
+
+/** Gets refund amount from a row — prefers USD column, falls back to local amount columns. */
+function getAmount(row) {
+  const keys = Object.keys(row)
+  const usdKey = keys.find(k => normalize(k) === 'refund amount in usd')
+  const shopifyKey = keys.find(k => normalize(k) === 'refund amount (apply in shopify)')
+  if (usdKey && row[usdKey] !== '' && row[usdKey] !== undefined) return parseAmount(row[usdKey])
+  if (shopifyKey && row[shopifyKey] !== '' && row[shopifyKey] !== undefined) return parseAmount(row[shopifyKey])
+  return parseAmount(row[COL.AMOUNT_LEGACY])
 }
 
 export { COL }
@@ -36,7 +48,7 @@ export function getPendingRows(rows) {
 
 /** Sum of Refund Amount across rows. */
 export function sumAmount(rows) {
-  return rows.reduce((acc, r) => acc + parseAmount(r[COL.AMOUNT]), 0)
+  return Math.round(rows.reduce((acc, r) => acc + getAmount(r), 0) * 100) / 100
 }
 
 /**
@@ -51,9 +63,9 @@ function groupBy(rows, keyFn, labelFn = k => k) {
     const existing = map.get(k)
     if (existing) {
       existing.count++
-      existing.amount += parseAmount(row[COL.AMOUNT])
+      existing.amount += getAmount(row)
     } else {
-      map.set(k, { key: k, label: labelFn(k), count: 1, amount: parseAmount(row[COL.AMOUNT]) })
+      map.set(k, { key: k, label: labelFn(k), count: 1, amount: getAmount(row) })
     }
   }
   return Array.from(map.values()).sort((a, b) => b.amount - a.amount)
@@ -68,10 +80,10 @@ export function getDailyRefunds(rows) {
     const key = toISODate(d)
     const existing = map.get(key)
     if (existing) {
-      existing.amount += parseAmount(row[COL.AMOUNT])
+      existing.amount += getAmount(row)
       existing.count++
     } else {
-      map.set(key, { date: key, label: formatShortDate(d), amount: parseAmount(row[COL.AMOUNT]), count: 1 })
+      map.set(key, { date: key, label: formatShortDate(d), amount: getAmount(row), count: 1 })
     }
   }
   return Array.from(map.values()).sort((a, b) => a.date.localeCompare(b.date))
@@ -87,10 +99,10 @@ export function getWeeklyRefunds(rows) {
     const label = weekLabel(d)
     const existing = map.get(key)
     if (existing) {
-      existing.amount += parseAmount(row[COL.AMOUNT])
+      existing.amount += getAmount(row)
       existing.count++
     } else {
-      map.set(key, { week: key, label, amount: parseAmount(row[COL.AMOUNT]), count: 1 })
+      map.set(key, { week: key, label, amount: getAmount(row), count: 1 })
     }
   }
   return Array.from(map.values()).sort((a, b) => a.week.localeCompare(b.week))
@@ -101,7 +113,10 @@ export function getByReason(rows) {
 }
 
 export function getByProduct(rows) {
-  return groupBy(rows, r => r[COL.PRODUCT])
+  const all = groupBy(rows, r => r[COL.PRODUCT])
+  const totalAmount = all.reduce((s, r) => s + r.amount, 0)
+  const filtered = all.filter(r => totalAmount > 0 && (r.amount / totalAmount) >= 0.05)
+  return filtered.length > 0 ? filtered.slice(0, 10) : all.slice(0, 10)
 }
 
 export function getByPayment(rows) {
@@ -109,7 +124,52 @@ export function getByPayment(rows) {
 }
 
 export function getByAgent(rows) {
-  return groupBy(rows, r => r[COL.AGENT])
+  return groupBy(rows, r => r[COL.AGENT] || '(Unassigned)')
+}
+
+export function getByAgentWithAvgPct(rows) {
+  const map = new Map()
+  for (const row of rows) {
+    const k = row[COL.AGENT] || '(Unassigned)'
+    const raw = row[COL.REFUND_PCT]
+    const pct = typeof raw === 'number' ? Math.round(raw * 100) : parseFloat(String(raw || '').replace('%', ''))
+    const existing = map.get(k)
+    if (existing) {
+      existing.count++
+      existing.amount += getAmount(row)
+      if (!isNaN(pct)) { existing.pctSum += pct; existing.pctCount++ }
+    } else {
+      map.set(k, { key: k, label: k, count: 1, amount: getAmount(row), pctSum: isNaN(pct) ? 0 : pct, pctCount: isNaN(pct) ? 0 : 1 })
+    }
+  }
+  return Array.from(map.values())
+    .map(r => ({ ...r, avgPct: r.pctCount > 0 ? Math.round(r.pctSum / r.pctCount) : null }))
+    .sort((a, b) => b.amount - a.amount)
+}
+
+export function getByProductWithTopReason(rows) {
+  const map = new Map()
+  for (const row of rows) {
+    const p = row[COL.PRODUCT]
+    if (!p) continue
+    const reason = row[COL.REASON] || ''
+    const existing = map.get(p)
+    if (existing) {
+      existing.count++
+      existing.amount += getAmount(row)
+      existing.reasons[reason] = (existing.reasons[reason] || 0) + 1
+    } else {
+      map.set(p, { key: p, label: p, count: 1, amount: getAmount(row), reasons: { [reason]: 1 } })
+    }
+  }
+  const all = Array.from(map.values())
+    .map(r => ({
+      ...r,
+      topReason: Object.entries(r.reasons).sort((a, b) => b[1] - a[1])[0]?.[0] ?? '',
+    }))
+    .sort((a, b) => b.amount - a.amount)
+  const totalAmount = all.reduce((s, r) => s + r.amount, 0)
+  return all.filter(r => totalAmount === 0 || (r.amount / totalAmount) >= 0.02).slice(0, 10)
 }
 
 /** Returns the full enriched row list sorted by Date Applied desc. */

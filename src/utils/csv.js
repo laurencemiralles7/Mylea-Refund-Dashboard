@@ -50,11 +50,38 @@ export function parseCSV(text) {
   })
 }
 
-/** Strips currency symbols and commas, returns a float (0 on failure). */
-export function parseAmount(str) {
-  if (!str) return 0
-  const n = parseFloat(str.replace(/[$€£¥,\s]/g, ''))
+/** Strips currency symbols and commas, returns a float (0 on failure). Accepts numbers directly. */
+export function parseAmount(val) {
+  if (typeof val === 'number') return val
+  if (!val) return 0
+  const n = parseFloat(String(val).replace(/[$€£¥,\s]/g, ''))
   return isNaN(n) ? 0 : n
+}
+
+/**
+ * Parses gviz JSON response into row objects keyed by column label.
+ * Numeric values are kept as-is (full precision). Dates are converted to M/D/YYYY.
+ */
+export function parseGvizJSON(text) {
+  const jsonStr = text.replace(/^[^(]*\(/, '').replace(/\);?\s*$/, '')
+  const data = JSON.parse(jsonStr)
+  const cols = data.table.cols.map(c => c.label || c.id)
+  return data.table.rows
+    .filter(row => row.c && row.c.some(c => c && c.v !== null && c.v !== undefined && c.v !== ''))
+    .map(row => {
+      const obj = {}
+      row.c.forEach((cell, i) => {
+        if (!cell || cell.v === null || cell.v === undefined) {
+          obj[cols[i]] = ''
+        } else if (typeof cell.v === 'string' && cell.v.startsWith('Date(')) {
+          const [y, m, d] = cell.v.slice(5, -1).split(',').map(Number)
+          obj[cols[i]] = `${m + 1}/${d}/${y}`
+        } else {
+          obj[cols[i]] = cell.v
+        }
+      })
+      return obj
+    })
 }
 
 /** Parses "M/D/YYYY" strings into a Date object (null on failure). */

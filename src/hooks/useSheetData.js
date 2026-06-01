@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
-import { parseCSV } from '../utils/csv'
+import { parseGvizJSON } from '../utils/csv'
 import { SPREADSHEET_ID, REFRESH_INTERVAL_MS } from '../config'
 
 function buildUrl(sheetName) {
-  return `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`
+  return `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}`
 }
 
 export function useSheetData(sheetName) {
@@ -17,9 +17,8 @@ export function useSheetData(sheetName) {
       const res = await fetch(buildUrl(sheetName))
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const text = await res.text()
-      // gviz returns HTML on error instead of CSV
       if (text.trim().startsWith('<')) throw new Error('Sheet not found or not public')
-      const parsed = parseCSV(text)
+      const parsed = parseGvizJSON(text)
       setRows(parsed)
       setLastUpdated(new Date())
       setError(null)

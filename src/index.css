@@ -596,3 +596,145 @@ a { text-decoration: none; color: inherit; }
   transition: color .15s;
 }
 .clear-filter:hover { color: #1D4ED8; }
+
+/* ── Page Tabs ─────────────────────────────────────────────── */
+.page-tabs {
+  display: flex;
+  border-bottom: 2px solid var(--border);
+  margin-bottom: 24px;
+  gap: 0;
+}
+
+.page-tab {
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: color .15s, border-color .15s;
+}
+.page-tab:hover { color: var(--primary); }
+.page-tab.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+
+/* ── KPI Master Grid (unified card sizing) ─────────────────── */
+.kpi-master-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+  align-items: start;
+}
+@media (max-width: 1024px) { .kpi-master-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 600px)  { .kpi-master-grid { grid-template-columns: 1fr; } }
+
+.kpi-section-label {
+  grid-column: 1 / -1;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #94A3B8;
+  padding-top: 8px;
+}
+.kpi-section-label:first-child { padding-top: 0; }
+
+/* ── Agent Filter Bar ──────────────────────────────────────── */
+.agent-filter-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+.agent-filter-btn {
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1.5px solid var(--border);
+  background: var(--card-bg);
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-weight: 500;
+  transition: all .15s;
+}
+.agent-filter-btn:hover { border-color: var(--primary); color: var(--primary); }
+.agent-filter-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+
+/* ── Analysis Tab ──────────────────────────────────────────── */
+.analysis-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+@media (max-width: 900px) { .analysis-grid { grid-template-columns: 1fr; } }
+
+.trend-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.trend-pill-red { background: #fef2f2; color: #ef4444; }
+.trend-pill-green { background: #f0fdf4; color: #10b981; }
+.trend-pill-neutral { background: #f1f5f9; color: #64748b; }
+
+/* ── Period Select ─────────────────────────────────────────── */
+.analysis-period-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.period-select-wrap { display: flex; align-items: center; gap: 8px; }
+.period-select-label { font-size: 12px; font-weight: 600; color: var(--text-muted); }
+.period-select {
+  padding: 6px 10px;
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  background: var(--card-bg);
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color .15s;
+}
+.period-select:focus { outline: none; border-color: var(--primary); }
+.vs-divider {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  padding: 0 4px;
+}
+
+/* ── Comparison chart ──────────────────────────────────────── */
+.comparison-legend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+.comp-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.comp-stats-row {
+  display: flex;
+  gap: 32px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+.comp-stat { display: flex; flex-direction: column; gap: 2px; }
+.comp-stat-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: #94A3B8;
+}
+.comp-stat-vals { display: flex; align-items: baseline; gap: 8px; }

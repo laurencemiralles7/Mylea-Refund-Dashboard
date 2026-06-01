@@ -25,7 +25,7 @@ function Badge({ text }) {
  * showBadge: if true, renders label as a colored badge
  * truncate: if true, truncates long labels
  */
-export default function DataTable({ title, rows, showBadge = false, truncate = false, emptyMessage = 'No data' }) {
+export default function DataTable({ title, rows, showBadge = false, truncate = false, showAvgPct = false, hideTotal = false, emptyMessage = 'No data', totalAmount }) {
   if (!rows.length) return (
     <div className="card">
       <h3 className="card-title">{title}</h3>
@@ -34,6 +34,7 @@ export default function DataTable({ title, rows, showBadge = false, truncate = f
   )
 
   const total = rows.reduce((s, r) => s + r.amount, 0)
+  const shareBase = totalAmount ?? total
   const maxAmount = Math.max(...rows.map(r => r.amount))
 
   return (
@@ -45,12 +46,12 @@ export default function DataTable({ title, rows, showBadge = false, truncate = f
             <th style={{ textAlign: 'left' }}>{title.split(' ')[0]}</th>
             <th style={{ textAlign: 'right' }}>Count</th>
             <th style={{ textAlign: 'right' }}>Amount</th>
-            <th style={{ textAlign: 'right' }}>Share</th>
+            <th style={{ textAlign: 'right' }}>{showAvgPct ? 'Avg %' : 'Share'}</th>
           </tr>
         </thead>
         <tbody>
           {rows.map(row => {
-            const share = total > 0 ? (row.amount / total) * 100 : 0
+            const share = shareBase > 0 ? (row.amount / shareBase) * 100 : 0
             return (
               <tr key={row.key}>
                 <td>
@@ -72,20 +73,24 @@ export default function DataTable({ title, rows, showBadge = false, truncate = f
                   {formatCurrency(row.amount)}
                 </td>
                 <td style={{ textAlign: 'right', color: 'var(--text-muted)', fontSize: 13 }}>
-                  {share.toFixed(0)}%
+                  {showAvgPct
+                    ? (row.avgPct !== null ? `${row.avgPct}%` : '—')
+                    : `${share.toFixed(0)}%`}
                 </td>
               </tr>
             )
           })}
         </tbody>
-        <tfoot>
-          <tr>
-            <td style={{ fontWeight: 600 }}>Total</td>
-            <td style={{ textAlign: 'right', fontWeight: 600 }}>{rows.reduce((s, r) => s + r.count, 0)}</td>
-            <td style={{ textAlign: 'right', fontWeight: 600 }}>{formatCurrency(total)}</td>
-            <td />
-          </tr>
-        </tfoot>
+        {!hideTotal && (
+          <tfoot>
+            <tr>
+              <td style={{ fontWeight: 600 }}>Total</td>
+              <td style={{ textAlign: 'right', fontWeight: 600 }}>{rows.reduce((s, r) => s + r.count, 0)}</td>
+              <td style={{ textAlign: 'right', fontWeight: 600 }}>{formatCurrency(total)}</td>
+              <td />
+            </tr>
+          </tfoot>
+        )}
       </table>
     </div>
   )

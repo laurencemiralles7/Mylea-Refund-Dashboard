@@ -102,6 +102,85 @@ export function filterRowsByRange(rows, range) {
   })
 }
 
+// ── Period selector utilities ──────────────────────────────────────────────
+
+/** Returns { start, end } for a Monday-based week. weeksAgo=0 = current week, 1 = last completed Mon–Sun. */
+export function getWeekRangeAgo(weeksAgo) {
+  const now = new Date()
+  const daysFromMonday = now.getDay() === 0 ? 6 : now.getDay() - 1
+  const thisMonday = new Date(now)
+  thisMonday.setDate(now.getDate() - daysFromMonday)
+  thisMonday.setHours(0, 0, 0, 0)
+  const start = new Date(thisMonday)
+  start.setDate(thisMonday.getDate() - weeksAgo * 7)
+  const end = new Date(start)
+  end.setDate(start.getDate() + 6)
+  end.setHours(23, 59, 59, 999)
+  return { start, end }
+}
+
+export function fmtWeekLabel(range) {
+  const o = { month: 'short', day: 'numeric' }
+  return `${range.start.toLocaleDateString('en-US', o)} – ${range.end.toLocaleDateString('en-US', o)}`
+}
+
+/** Last 5 completed weeks as period options. */
+export function getWeekOptions() {
+  return [1, 2, 3, 4, 5].map(i => ({
+    id: i === 1 ? 'last_week' : `week_ago_${i}`,
+    label: fmtWeekLabel(getWeekRangeAgo(i)),
+  }))
+}
+
+/** Last 6 months as period options. */
+export function getMonthOptions() {
+  const now = new Date()
+  const opts = []
+  for (let i = 0; i <= 5; i++) {
+    let m = now.getMonth() - i
+    let y = now.getFullYear()
+    if (m < 0) { m += 12; y-- }
+    const id = i === 0 ? 'this_month' : i === 1 ? 'last_month' : `month_${y}_${m}`
+    opts.push({ id, label: new Date(y, m, 1).toLocaleString('en-US', { month: 'long', year: 'numeric' }) })
+  }
+  return opts
+}
+
+/** Resolves a period option id (from getWeekOptions / getMonthOptions) to { start, end }. */
+export function resolvePeriodRange(id) {
+  const now = new Date()
+  if (id.startsWith('week_ago_')) return getWeekRangeAgo(parseInt(id.slice(9)))
+  if (id === 'this_week')  return getWeekRangeAgo(0)
+  if (id === 'last_week')  return getWeekRangeAgo(1)
+  if (id === 'this_month') return getMonthRange(now.getFullYear(), now.getMonth())
+  if (id === 'last_month') {
+    const m = now.getMonth() === 0 ? 11 : now.getMonth() - 1
+    const y = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear()
+    return getMonthRange(y, m)
+  }
+  if (id.startsWith('month_')) {
+    const [, y, m] = id.split('_').map(Number)
+    return getMonthRange(y, m)
+  }
+  return null
+}
+
+/** Resolves the DateFilter component's filter object to { start, end }. */
+export function resolveFilterRange(filter) {
+  if (!filter) return null
+  if (filter.type === 'preset') return getPresetRange(filter.id)
+  if (filter.type === 'month') return getMonthRange(filter.year, filter.month)
+  if (filter.type === 'custom') {
+    const [sy, sm, sd] = filter.start.split('-').map(Number)
+    const [ey, em, ed] = filter.end.split('-').map(Number)
+    return {
+      start: new Date(sy, sm - 1, sd),
+      end: new Date(ey, em - 1, ed, 23, 59, 59, 999),
+    }
+  }
+  return null
+}
+
 /** Builds a list of { year, month, label } options from actual row data. */
 export function getAvailableMonths(rows) {
   const seen = new Set()
