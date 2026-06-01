@@ -170,6 +170,7 @@ export function resolveFilterRange(filter) {
   if (!filter) return null
   if (filter.type === 'preset') return getPresetRange(filter.id)
   if (filter.type === 'month') return getMonthRange(filter.year, filter.month)
+  if (filter.type === 'week') return resolvePeriodRange(filter.weekId)
   if (filter.type === 'custom') {
     const [sy, sm, sd] = filter.start.split('-').map(Number)
     const [ey, em, ed] = filter.end.split('-').map(Number)

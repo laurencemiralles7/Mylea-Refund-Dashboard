@@ -150,12 +150,21 @@ export default function AgentAnalysis({ rows, store, filter, setFilter }) {
   const [wowB, setWowB] = useState('week_ago_2')
   const [momA, setMomA] = useState('this_month')
   const [momB, setMomB] = useState('last_month')
+  const [wowFilter, setWowFilter] = useState('all')
+  const [momFilter, setMomFilter] = useState('all')
 
   const { currency } = store
   const weekOptions  = getWeekOptions()
   const monthOptions = getMonthOptions()
 
   const agentNames = [...new Set(rows.map(r => r['Refunded By']).filter(Boolean))].sort()
+
+  function applyRefundFilter(scopedRows, filterId) {
+    if (filterId === 'partial') return scopedRows.filter(r => parsePct(r) < 100)
+    if (filterId === 'oos')     return scopedRows.filter(r => !isIssue(r))
+    if (filterId === 'issue')   return scopedRows.filter(r => isIssue(r) && parsePct(r) === 100)
+    return scopedRows
+  }
 
   const agentScopedRows = agentName ? rows.filter(r => r['Refunded By'] === agentName) : rows
 
@@ -241,9 +250,20 @@ export default function AgentAnalysis({ rows, store, filter, setFilter }) {
             <span className="vs-divider">vs</span>
             <PeriodSelect label="Period B" value={wowB} onChange={setWowB} options={weekOptions} />
           </div>
+          <div className="agent-filter-bar">
+            {AGENT_FILTERS.map(f => (
+              <button
+                key={f.id}
+                className={`agent-filter-btn${wowFilter === f.id ? ' active' : ''}`}
+                onClick={() => setWowFilter(f.id)}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
           <AgentComparisonView
-            rowsA={filterRowsByRange(agentScopedRows, resolvePeriodRange(wowA))}
-            rowsB={filterRowsByRange(agentScopedRows, resolvePeriodRange(wowB))}
+            rowsA={applyRefundFilter(filterRowsByRange(agentScopedRows, resolvePeriodRange(wowA)), wowFilter)}
+            rowsB={applyRefundFilter(filterRowsByRange(agentScopedRows, resolvePeriodRange(wowB)), wowFilter)}
             labelA={weekOptions.find(o => o.id === wowA)?.label ?? wowA}
             labelB={weekOptions.find(o => o.id === wowB)?.label ?? wowB}
             currency={currency}
@@ -259,9 +279,20 @@ export default function AgentAnalysis({ rows, store, filter, setFilter }) {
             <span className="vs-divider">vs</span>
             <PeriodSelect label="Period B" value={momB} onChange={setMomB} options={monthOptions} />
           </div>
+          <div className="agent-filter-bar">
+            {AGENT_FILTERS.map(f => (
+              <button
+                key={f.id}
+                className={`agent-filter-btn${momFilter === f.id ? ' active' : ''}`}
+                onClick={() => setMomFilter(f.id)}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
           <AgentComparisonView
-            rowsA={filterRowsByRange(agentScopedRows, resolvePeriodRange(momA))}
-            rowsB={filterRowsByRange(agentScopedRows, resolvePeriodRange(momB))}
+            rowsA={applyRefundFilter(filterRowsByRange(agentScopedRows, resolvePeriodRange(momA)), momFilter)}
+            rowsB={applyRefundFilter(filterRowsByRange(agentScopedRows, resolvePeriodRange(momB)), momFilter)}
             labelA={monthOptions.find(o => o.id === momA)?.label ?? momA}
             labelB={monthOptions.find(o => o.id === momB)?.label ?? momB}
             currency={currency}

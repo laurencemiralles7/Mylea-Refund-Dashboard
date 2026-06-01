@@ -1,13 +1,15 @@
 import { useState } from 'react'
-import { PRESETS, getAvailableMonths } from '../utils/dateFilters'
+import { PRESETS, getAvailableMonths, getWeekOptions } from '../utils/dateFilters'
 
 export default function DateFilter({ rows, value, onChange }) {
   const [showMonthPicker, setShowMonthPicker] = useState(false)
+  const [showWeekPicker, setShowWeekPicker] = useState(false)
   const [showCustom, setShowCustom] = useState(false)
   const [customStart, setCustomStart] = useState('')
   const [customEnd, setCustomEnd] = useState('')
 
   const availableMonths = rows ? getAvailableMonths(rows) : []
+  const weekOptions = getWeekOptions()
 
   function handlePreset(id) {
     setShowMonthPicker(false)
@@ -20,6 +22,11 @@ export default function DateFilter({ rows, value, onChange }) {
     onChange({ type: 'month', year, month, label })
   }
 
+  function handleWeek(weekId, label) {
+    setShowWeekPicker(false)
+    onChange({ type: 'week', weekId, label })
+  }
+
   function handleCustomApply() {
     if (!customStart || !customEnd) return
     onChange({ type: 'custom', start: customStart, end: customEnd })
@@ -30,6 +37,7 @@ export default function DateFilter({ rows, value, onChange }) {
     if (!value) return 'All Time'
     if (value.type === 'preset') return PRESETS.find(p => p.id === value.id)?.label ?? 'All Time'
     if (value.type === 'month') return value.label
+    if (value.type === 'week') return value.label
     if (value.type === 'custom') return `${value.start} → ${value.end}`
     return 'All Time'
   }
@@ -71,11 +79,34 @@ export default function DateFilter({ rows, value, onChange }) {
           </div>
         </div>
 
+        {/* Week picker */}
+        <div className="filter-dropdown-wrap">
+          <button
+            className={`filter-pill ${value?.type === 'week' ? 'active' : ''}`}
+            onClick={() => { setShowWeekPicker(v => !v); setShowMonthPicker(false); setShowCustom(false) }}
+          >
+            By Week ▾
+          </button>
+          {showWeekPicker && (
+            <div className="filter-dropdown">
+              {weekOptions.map(w => (
+                <button
+                  key={w.id}
+                  className={`dropdown-item ${value?.type === 'week' && value.weekId === w.id ? 'active' : ''}`}
+                  onClick={() => handleWeek(w.id, w.label)}
+                >
+                  {w.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
         {/* Month picker */}
         <div className="filter-dropdown-wrap">
           <button
             className={`filter-pill ${value?.type === 'month' ? 'active' : ''}`}
-            onClick={() => { setShowMonthPicker(v => !v); setShowCustom(false) }}
+            onClick={() => { setShowMonthPicker(v => !v); setShowWeekPicker(false); setShowCustom(false) }}
           >
             By Month ▾
           </button>
@@ -101,7 +132,7 @@ export default function DateFilter({ rows, value, onChange }) {
         <div className="filter-dropdown-wrap">
           <button
             className={`filter-pill ${value?.type === 'custom' ? 'active' : ''}`}
-            onClick={() => { setShowCustom(v => !v); setShowMonthPicker(false) }}
+            onClick={() => { setShowCustom(v => !v); setShowMonthPicker(false); setShowWeekPicker(false) }}
           >
             Custom ▾
           </button>
